@@ -70,13 +70,32 @@ sub get_emails {
 
 # The exit dialog displayed when trying to exit the application
 sub exit_dialog {
-    my $return = $Mail::cui->dialog(
+    my $exit = $Mail::cui->dialog(
         -message  => 'Quit?',
         -title    => 'Exit',
         -buttons  => ['yes', 'no'],
     );
 
-    exit(0) if $return;
+    exit(0) if $exit;
+}
+
+
+sub show_message {
+    my ($imap) = @_;
+    my $id = 600;
+
+    my $email = Email::Simple->new(join '', @{$imap->get($id)});
+
+    #     my $text =  'From: ' . $email->header('From') . "\n"
+    #                 . 'To: ' . $email->header('To') . "\n"
+    #                 . 'Subject: ' . $email->header('Subject') . "\n"
+    #                 . $email->body;
+
+    my $message = $Mail::cui->dialog(
+        -message    =>  'Sample text',
+        -title      =>  $email->header('Subject'),
+        -buttons    =>  ['yes', 'no'],
+    );
 }
 
 
@@ -150,8 +169,13 @@ $container->add(
     'maillist', 'Listbox',
     -values => [1..$nm],
     -labels => \%subjects,
-    -radio  => 1
 );
+
+
+# show_message($imap);
+
+
+
 
 $Mail::cui->set_binding(sub {$menu->focus()}, "\cX");
 $Mail::cui->set_binding(\&exit_dialog, "\cQ");
