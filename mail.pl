@@ -176,12 +176,18 @@ my $inbox = $notebook->add_page('Inbox');
 
 my $nm = $imap->select('INBOX');
 
+$Mail::cui->progress(
+    -message   => 'Loading inbox...',
+    -max       => $nm
+);
+
 my %emails;
 my %subjects;
 for (my $i = 1; $i <= $nm; $i++) {
     my $es = Email::Simple->new(join '', @{$imap->top($i)});
     $emails{$i} = $es;
     $subjects{$i} = $es->header('Subject');
+    $Mail::cui->setprogress($i);
 }
 
 my $maillist = $inbox->add(
