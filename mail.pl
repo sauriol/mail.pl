@@ -81,21 +81,40 @@ sub exit_dialog {
 
 
 sub show_message {
-    my ($imap) = @_;
-    my $id = 600;
+    my ($imap, $notebook, $id) = @_;
 
     my $email = Email::Simple->new(join '', @{$imap->get($id)});
 
-    #     my $text =  'From: ' . $email->header('From') . "\n"
-    #                 . 'To: ' . $email->header('To') . "\n"
-    #                 . 'Subject: ' . $email->header('Subject') . "\n"
-    #                 . $email->body;
+    my $text =  'From: ' . $email->header('From') . "\n"
+                . 'To: ' . $email->header('To') . "\n"
+                . 'Subject: ' . $email->header('Subject') . "\n"
+                . $email->body;
 
-    my $message = $Mail::cui->dialog(
-        -message    =>  'Sample text',
-        -title      =>  $email->header('Subject'),
-        -buttons    =>  ['yes', 'no'],
+    my $display = $notebook->add_page($email->header('Subject'));
+
+    my $textview = $display->add(
+        'textview', 'TextViewer',
+        -text        => $text,
     );
+
+    $textview->focus();
+
+                #    my $message = $win->add(
+                #        'message', 'Dialog::Basic',
+                #        -title       => $email->header('Subject'),
+                #        -message     => $text,
+                #        -buttons     => ['ok'],
+                #        -vscrollbar  => 1
+                #    );
+
+                #    my $message = $Mail::cui->dialog(
+                #        -message     => $text,
+                #        -title       => $email->header('Subject'),
+                #        -buttons     => ['ok'],
+                #        -vscrollbar  => 1,
+                #    );
+
+                #    $message->focus();
 }
 
 
@@ -144,16 +163,16 @@ my $menu = $Mail::cui->add(
     -menu   => \@menu,
 );
 
-my $win1 = $Mail::cui->add(
-    'win1', 'Window',
+my $win = $Mail::cui->add(
+    'win', 'Window',
     -border => 1,
     -y      => 1,
 );
 
 
-my $container = $win1->add(
-    'contain', 'Container'
-);
+
+my $notebook = $win->add(undef, 'Notebook');
+my $inbox = $notebook->add_page('Inbox');
 
 my $nm = $imap->select('INBOX');
 
@@ -165,20 +184,25 @@ for (my $i = 1; $i <= $nm; $i++) {
     $subjects{$i} = $es->header('Subject');
 }
 
-$container->add(
+my $maillist = $inbox->add(
     'maillist', 'Listbox',
-    -values => [1..$nm],
-    -labels => \%subjects,
+    -values    => [1..$nm],
+    -labels    => \%subjects,
+    -selected  => 0,
 );
-
-
-# show_message($imap);
 
 
 
 
 $Mail::cui->set_binding(sub {$menu->focus()}, "\cX");
 $Mail::cui->set_binding(\&exit_dialog, "\cQ");
+$Mail::cui->set_binding(sub {$notebook->delete_page($notebook->active_page())}, "\cW");
+$Mail::cui->set_binding(sub {
+        show_message($imap, $notebook, $maillist->id());
 
-$container->focus();
+}, "\cN");
+
+#$container->focus();
+#$inbox->focus();
+$notebook->focus();
 $Mail::cui->mainloop();
