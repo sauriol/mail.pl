@@ -8,7 +8,8 @@ use Email::Simple;
 use Curses::UI;
 
 
-my $cui = new Curses::UI(-color_support   => 1);
+# Global window
+my $cui = new Curses::UI();
 
 
 
@@ -108,7 +109,7 @@ sub get_info {
 sub open_inbox {
     my ($imap) = @_;
 
-    my $inbox = build_window();
+    my ($inbox, $notebook) = build_window();
 
     my $nm = $imap->select('INBOX');
     $cui->progress(
@@ -129,12 +130,13 @@ sub open_inbox {
         'mailist', 'Listbox',
         -values      => [1..$nm],
         -labels      => \%subjects,
-        -selected    => 0,
+        -selected    => 1,
         -vscrollbar  => 1,
     );
 
     $inbox->focus();
 
+    return ($notebook, $maillist);
 }
 
 
@@ -168,7 +170,7 @@ sub build_window {
 
     warn 'Window built...';
 
-    return $inbox;
+    return ($inbox, $notebook);
 }
 
 sub exit_dialog {
@@ -182,6 +184,28 @@ sub exit_dialog {
 }
 
 
+sub show_message {
+    my ($imap, $notebook, $id) = @_;
+
+    warn "Opening message $id...";
+
+    my $email = Email::Simple->new(join '', @{$imap->get($id)});
+
+    my $text =  'From: ' . $email->header('From') . "\n" .
+                'To: ' . $email->header('To') . "\n" .
+                'Subject' . $email->header('Subject') . "\n" .
+                $email->body;
+
+    my $display = $notebook->add_page($email->header('Subject'));
+
+    my $textview = $display->add(
+        'mailview', 'TextViewer',
+        -text     => $text,
+    );
+
+    $textview->focus();
+}
+
 
 
 
@@ -191,6 +215,15 @@ sub exit_dialog {
 ### Main ###
 
 my $imap = get_info();
-open_inbox($imap);
+my ($notebook, $maillist) = open_inbox($imap);
+
+
+### Set up bindings ###
+$cui->set_binding(sub {$cui->getobj('menu')->focus()}, "\cX");
+$cui->set_binding(\&exit_dialog, "\cQ");
+$cui->set_binding(sub {$notebook->delete_page($notebook->active_page)}, "\cW");
+$cui->set_binding(sub {show_message($imap, $notebook, $maillist->id())}, "\cN");
+
+
 
 $cui->mainloop();
